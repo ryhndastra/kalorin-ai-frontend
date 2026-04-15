@@ -1,9 +1,12 @@
-function App() {
+import Navbar from "./components/Navbar";
+import LandingPage from "./pages/LandingPage";
+
+export default function App() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <h1 className="text-2xl font-bold text-green-500">KaloriN AI</h1>
+    <div className="min-h-screen bg-gray-50 font-sans">
+      {/* Coba tes render Navbar versi landing */}
+      <Navbar variant="Landing" />
+      <LandingPage />
     </div>
   );
 }
-
-export default App;
