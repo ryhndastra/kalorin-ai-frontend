@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Navbar({ variant = "Landing" }) {
   const [isVisible, setIsVisible] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let scrollTimeout;
@@ -30,7 +32,10 @@ export default function Navbar({ variant = "Landing" }) {
       }`}
     >
       {/* Logo */}
-      <div className="flex items-center gap-2 font-bold text-xl cursor-pointer">
+      <div
+        onClick={() => navigate("/")}
+        className="flex items-center gap-2 font-bold text-xl cursor-pointer"
+      >
         <img
           src="/images/logo/kalorinLogo.png"
           alt="KaloriN AI Logo"
@@ -38,6 +43,7 @@ export default function Navbar({ variant = "Landing" }) {
         />
       </div>
 
+      {/* Nav buat User yg udah login dan Guest */}
       {variant !== "Landing" && (
         <ul className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-500">
           <li className="cursor-pointer hover:text-gray-900">Home</li>
@@ -48,10 +54,14 @@ export default function Navbar({ variant = "Landing" }) {
         </ul>
       )}
 
+      {/* Nav buat landing Page */}
       <div className="flex items-center gap-4">
         {variant === "Landing" && (
           <>
-            <button className="text-sm font-semibold text-gray-600 hover:text-green-600">
+            <button
+              onClick={() => navigate("/analyze")}
+              className="text-sm font-semibold text-gray-600 hover:text-green-600"
+            >
               Guest
             </button>
             <button className="bg-green-500 text-white text-sm font-semibold px-5 py-2 rounded-xl hover:bg-green-600 transition">
