@@ -40,7 +40,7 @@ const AnalyzePage = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setCapturedImage(reader.result); // Kita simpan ke state yang sama dengan kamera
+        setCapturedImage(reader.result);
         setIsCameraActive(false);
       };
       reader.readAsDataURL(file);
@@ -69,7 +69,7 @@ const AnalyzePage = () => {
         </div>
       )}
 
-      {/* Konten Atas: Masih di dalam max-w-7xl */}
+      {/* Header */}
       <div className="max-w-7xl mx-auto px-4 w-full py-8">
         {/* Header Section */}
         <div className="flex justify-between items-start mb-6">
@@ -113,7 +113,7 @@ const AnalyzePage = () => {
         </div>
       </div>
 
-      {/* Scan Area: Background Full ke samping */}
+      {/* Scan Area */}
       <div className="bg-[#eefaf1] w-full flex-grow mt-4 pt-10 pb-20">
         <div className="max-w-7xl mx-auto px-4 w-full">
           <div className="border-2 border-green-400 border-dashed rounded-3xl p-6 min-h-[400px] flex items-center justify-center bg-black/5 overflow-hidden mb-6">
