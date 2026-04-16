@@ -1,6 +1,9 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 const LandingHero = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="flex flex-col items-center text-center pt-20 pb-16 px-4 bg-[#eefaf1] relative overflow-hidden min-h-screen">
       {/* blob */}
@@ -28,7 +31,10 @@ const LandingHero = () => {
         </p>
 
         {/* Button */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-16 w-full sm:w-auto">
+        <div
+          onClick={() => navigate("/analyze")}
+          className="flex flex-col sm:flex-row gap-4 mb-16 w-full sm:w-auto"
+        >
           <button className="bg-green-500 text-white px-10 py-3.5 rounded-full font-semibold hover:bg-green-600 transition-colors shadow-lg shadow-green-500/20 w-full sm:w-auto">
             Mulai Gratis
           </button>
