@@ -7,9 +7,12 @@ export default function App() {
   return (
     <Router>
       <Routes>
+        {/* landing Page */}
         <Route path="/" element={<LandingPage />} />
-
+        {/* Analyze Page */}
         <Route path="/analyze" element={<AnalyzePage />} />
+        {/* Login Page */}
+        <Route path="/login" element={<LoginPage />} />
       </Routes>
     </Router>
   );
