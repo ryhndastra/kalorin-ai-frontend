@@ -1,8 +1,8 @@
 import React from "react";
-import LandingHero from "../components/LandingHero";
-import Features from "../components/Features";
-import HowItWorks from "../components/HowItWorks";
-import LandingCTA from "../components/LandingCTA";
+import LandingHero from "../components/LandingPage/LandingHero";
+import Features from "../components/LandingPage/Features";
+import HowItWorks from "../components/LandingPage/HowItWorks";
+import LandingCTA from "../components/LandingPage/LandingCTA";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 
