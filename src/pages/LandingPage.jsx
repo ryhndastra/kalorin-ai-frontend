@@ -4,12 +4,11 @@ import Features from "../components/LandingPage/Features";
 import HowItWorks from "../components/LandingPage/HowItWorks";
 import LandingCTA from "../components/LandingPage/LandingCTA";
 import Footer from "../components/Footer";
-import Navbar from "../components/Navbar";
-
+import LandingNavbar from "../components/Navbar/LandingNavbar";
 export default function LandingPage() {
   return (
     <div className="min-h-screen">
-      <Navbar variant="Landing" />
+      <LandingNavbar />
       <LandingHero />
       <Features />
       <HowItWorks />

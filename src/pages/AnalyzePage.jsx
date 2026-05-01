@@ -1,26 +1,30 @@
-import React, { useState, useCallback } from "react";
-import Navbar from "../components/Navbar";
-import { Camera, Search } from "lucide-react";
+import React, { useState, useCallback, useEffect } from "react";
+import Navbar from "../components/Navbar/Navbar";
+import { Camera, Search, User } from "lucide-react";
+import toast, { Toaster } from "react-hot-toast";
 import CameraScanner from "../components/Analyze/CameraScanner";
 import ImagePreview from "../components/Analyze/ImagePreview";
 import DefaultScanPlaceholder from "../components/Analyze/DefaultScanPlaceholder";
 import AnalysisResult from "../components/Analyze/AnalysisResult";
 import GuestUpsell from "../components/Analyze/GuestUpsell";
 import LoadingCard from "../components/Analyze/LoadingCard";
+import { useAuth } from "../context/AuthContext";
 
 const AnalyzePage = () => {
   // states
-  const [isGuest] = useState(true);
+  const { user } = useAuth();
+  const isGuest = !user;
   const [activeTab, setActiveTab] = useState("scan");
   const [analysisResult, setAnalysisResult] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [facingMode, setFacingMode] = useState("environment");
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
 
   // handler untuk analisis makanan. nanti bakal ganti ke API call, sekarang masih dummy pakai timeout
-  const handleAnalyze = () => {
-    setIsLoading(true);
+  const handleAnalyze = async (e) => {
+    e.preventDefault();
+    setIsAnalyzing(true);
     setTimeout(() => {
       const dummyData = {
         foodName: "Avocado Toast with Egg",
@@ -29,7 +33,7 @@ const AnalyzePage = () => {
         confidence: "95%",
       };
       setAnalysisResult(dummyData);
-      setIsLoading(false);
+      setIsAnalyzing(false);
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
     }, 2000);
   };
@@ -57,29 +61,49 @@ const AnalyzePage = () => {
     setIsCameraActive(false);
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      const hasSeenToast = sessionStorage.getItem("welcomeToastShown");
+      if (!hasSeenToast) {
+        toast.success(`Welcome back, ${user.displayName || "User"}!`, {
+          icon: "👋",
+        });
+        sessionStorage.setItem("welcomeToastShown", "true");
+      }
+    }
+  }, [user]);
+
   return (
     <div className="min-h-screen bg-white pt-24 font-sans flex flex-col">
-      <Navbar variant={isGuest ? "Guest" : "User"} />
+      <Toaster position="top-center" reverseOrder={false} />
+      <Navbar user={user} />
 
+      {/* banner untuk guest */}
       {isGuest && (
-        <div className="w-full bg-green-500 p-6">
-          <div className="max-w-7xl mx-auto px-4 text-white font-medium">
-            Sign in to track meals & get personalized recommendations
+        <div className="w-full bg-green-500 p-4">
+          <div className="max-w-7xl mx-auto px-4 text-white text-sm font-medium flex justify-between items-center">
+            <span>
+              Sign in to track meals & get personalized recommendations
+            </span>
           </div>
         </div>
       )}
 
       {/* Header */}
       <div className="max-w-7xl mx-auto px-4 w-full py-8">
-        <div className="flex justify-between items-start mb-6">
+        <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-xl font-bold text-gray-900 mb-1">
               Food Analysis
             </h1>
             <p className="text-sm text-gray-500">
-              Analyze any food with AI — free, no account needed
+              {isGuest
+                ? "Analyze any food with AI — free, no account needed"
+                : "Identify your meal and track your daily nutrition"}
             </p>
           </div>
+
+          {/* Hanya tampilkan label GuestMode jika belum login */}
           {isGuest && (
             <span className="px-5 py-2 border border-green-600 bg-[#eefaf1] text-green-600 text-xs font-semibold rounded-lg">
               GuestMode
@@ -137,7 +161,7 @@ const AnalyzePage = () => {
             )}
           </div>
 
-          {isLoading && <LoadingCard />}
+          {isAnalyzing && <LoadingCard />}
           {analysisResult && (
             <AnalysisResult
               result={analysisResult}
