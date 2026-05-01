@@ -3,8 +3,10 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../config/firebase";
 import { AuthContext } from "./AuthContext";
 
+import Navbar from "../components/Navbar/Navbar";
+import HomeSkeleton from "../components/skeletons/HomeSkeleton";
 import AnalyzeSkeleton from "../components/skeletons/AnalyzeSkeleton";
-import DefaultSkeleton from "../components/skeletons/DefaultSkeleton";
+import DefaultSpinner from "../components/skeletons/DefaultSpinner";
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -18,32 +20,27 @@ export const AuthProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  // skeleton router
-  const renderSpecificSkeleton = () => {
+  const renderSkeleton = () => {
     const path = window.location.pathname;
-
     switch (path) {
+      case "/":
+      case "/home":
+        return <HomeSkeleton />;
       case "/analyze":
         return <AnalyzeSkeleton />;
-      case "/meals":
-        return (
-          <div className="p-20 text-center">
-            Ini Skeleton Meals (Bikin kayak Analyze)
-          </div>
-        );
-      case "/track":
-        return (
-          <div className="p-20 text-center">
-            Ini Skeleton Track (Bikin Grafik abu-abu)
-          </div>
-        );
       default:
-        return <DefaultSkeleton />;
+        return <DefaultSpinner />;
     }
   };
 
   if (authLoading) {
-    return renderSpecificSkeleton();
+    return (
+      <div className="pt-20">
+        {" "}
+        <Navbar user={null} loading={true} />
+        {renderSkeleton()}
+      </div>
+    );
   }
 
   return (

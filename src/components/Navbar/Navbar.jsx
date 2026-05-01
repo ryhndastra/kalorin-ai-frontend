@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import NavLinks from "./NavLinks";
 import NavUserDropdown from "./NavUserDropdown";
 
-export default function Navbar({ user }) {
+export default function Navbar({ user, loading }) {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
@@ -43,8 +43,9 @@ export default function Navbar({ user }) {
       <NavLinks />
 
       <div className="flex items-center gap-4">
-        {/* jika user makan dropdown, jika guest maka login button */}
-        {user ? (
+        {loading ? (
+          <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+        ) : user ? (
           <NavUserDropdown user={user} />
         ) : (
           <>

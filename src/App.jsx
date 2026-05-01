@@ -11,6 +11,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/analyze" element={<AnalyzePage />} />
+      <Route path="/home" element={<HomePage />} />
 
       <Route element={<GuestRoute />}>
         <Route path="/" element={<LandingPage />} />

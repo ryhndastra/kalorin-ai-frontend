@@ -9,10 +9,12 @@ import AnalysisResult from "../components/Analyze/AnalysisResult";
 import GuestUpsell from "../components/Analyze/GuestUpsell";
 import LoadingCard from "../components/Analyze/LoadingCard";
 import { useAuth } from "../context/AuthContext";
+import AnalyzeSkeleton from "../components/skeletons/AnalyzeSkeleton";
 
 const AnalyzePage = () => {
   // states
   const { user } = useAuth();
+  const [isPageLoading, setIsPageLoading] = useState(true);
   const isGuest = !user;
   const [activeTab, setActiveTab] = useState("scan");
   const [analysisResult, setAnalysisResult] = useState(null);
@@ -37,6 +39,14 @@ const AnalyzePage = () => {
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
     }, 2000);
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsPageLoading(false);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // handler untuk upload file
   const handleFileUpload = (event) => {
@@ -73,10 +83,19 @@ const AnalyzePage = () => {
     }
   }, [user]);
 
+  if (isPageLoading) {
+    return (
+      <div className="pt-20 min-h-screen bg-white">
+        <Navbar user={user} loading={false} />
+        <AnalyzeSkeleton />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white pt-24 font-sans flex flex-col">
       <Toaster position="top-center" reverseOrder={false} />
-      <Navbar user={user} />
+      <Navbar user={user} loading={false} />
 
       {/* banner untuk guest */}
       {isGuest && (
