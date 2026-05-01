@@ -1,19 +1,22 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import AnalyzePage from "./pages/AnalyzePage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import HomePage from "./pages/HomePage";
+import GuestRoute from "./components/Navbar/GuestRoute";
 
 export default function App() {
   return (
-    <Router>
-      <Routes>
-        {/* landing Page */}
+    <Routes>
+      <Route path="/analyze" element={<AnalyzePage />} />
+
+      <Route element={<GuestRoute />}>
         <Route path="/" element={<LandingPage />} />
-        {/* Analyze Page */}
-        <Route path="/analyze" element={<AnalyzePage />} />
-        {/* Login Page */}
         <Route path="/login" element={<LoginPage />} />
-      </Routes>
-    </Router>
+        <Route path="/register" element={<RegisterPage />} />
+      </Route>
+    </Routes>
   );
 }
