@@ -32,6 +32,8 @@ export const AuthProvider = ({ children }) => {
         return <AnalyzeSkeleton />;
       case "/":
         return null;
+      case "/profile":
+        return <DefaultSpinner />;
       default:
         return <DefaultSpinner />;
     }
