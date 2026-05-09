@@ -8,13 +8,14 @@ import DefaultScanPlaceholder from "../components/Analyze/DefaultScanPlaceholder
 import AnalysisResult from "../components/Analyze/AnalysisResult";
 import GuestUpsell from "../components/Analyze/GuestUpsell";
 import LoadingCard from "../components/Analyze/LoadingCard";
+import { useUser } from "../context/UserContext";
 import { useAuth } from "../context/AuthContext";
 import AnalyzeSkeleton from "../components/skeletons/AnalyzeSkeleton";
 
 const AnalyzePage = () => {
   // states
   const { user } = useAuth();
-  const [isPageLoading, setIsPageLoading] = useState(true);
+  const { isInitialized, loading: profileLoading } = useUser();
   const isGuest = !user;
   const [activeTab, setActiveTab] = useState("scan");
   const [analysisResult, setAnalysisResult] = useState(null);
@@ -22,6 +23,18 @@ const AnalyzePage = () => {
   const [facingMode, setFacingMode] = useState("environment");
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
+  const [isSwitching, setIsSwitching] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsSwitching(false);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const isPageLoading =
+    !isInitialized || (user && profileLoading) || isSwitching;
 
   // handler untuk analisis makanan. nanti bakal ganti ke API call, sekarang masih dummy pakai timeout
   const handleAnalyze = async (e) => {
@@ -39,14 +52,6 @@ const AnalyzePage = () => {
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
     }, 2000);
   };
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsPageLoading(false);
-    }, 600);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   // handler untuk upload file
   const handleFileUpload = (event) => {
@@ -86,7 +91,7 @@ const AnalyzePage = () => {
   if (isPageLoading) {
     return (
       <div className="pt-20 min-h-screen bg-white">
-        <Navbar user={user} loading={false} />
+        <Navbar user={user} loading={true} />
         <AnalyzeSkeleton />
       </div>
     );

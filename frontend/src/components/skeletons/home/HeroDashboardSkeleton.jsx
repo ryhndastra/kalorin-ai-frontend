@@ -2,7 +2,7 @@ import React from "react";
 
 const HeroDashboardSkeleton = () => {
   return (
-    <div className="bg-[#4ADE80] rounded-b-[40px] pt-8 pb-12 px-6 shadow-sm">
+    <div className="bg-[#22C55E] rounded-b-[40px] pt-8 pb-12 px-6 shadow-sm">
       <div className="max-w-5xl mx-auto animate-pulse">
         <div className="w-24 h-4 bg-green-200/50 rounded-md mb-3"></div>
         <div className="w-40 h-8 bg-green-200/50 rounded-md mb-6"></div>

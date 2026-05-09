@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useUser } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../config/firebase";
 import { signOut } from "firebase/auth";
+import axios from "axios";
 import Navbar from "../components/Navbar/Navbar";
 import ProfileHero from "../components/Profile/ProfileHero";
 import StatsCard from "../components/Profile/StatsCard";
@@ -11,43 +13,73 @@ import EditModal from "../components/Profile/EditModal";
 
 const ProfilePage = () => {
   const { user } = useAuth();
+  const { userData, fetchProfile } = useUser();
   const navigate = useNavigate();
 
-  const calculateAge = (birthDateString) => {
-    if (!birthDateString) return 0;
-    const today = new Date();
-    const birthDate = new Date(birthDateString);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
-  // State Utama (nanti nyambng ke Supabase)
-  const [userData, setUserData] = useState({
-    birthdate: "2005-09-09", // default birthdate agar age otomatis terhitung
-    weight: 70,
-    height: 181,
-    goal: "Stay Healthy",
-    dailyCalories: 1850,
-    proteinTarget: 120,
-  });
-
-  // State untuk kontrol modal
-  const [modalType, setModalType] = useState(null); // 'stats', 'goals', atau null
+  // state untuk kontrol modal & loading
+  const [modalType, setModalType] = useState(null);
   const [tempData, setTempData] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
+  // buka modal dan isi data sementara dengan data dari Context (Backend)
   const openModal = (type) => {
-    setTempData({ ...userData }); // copy data asli ke data sementara
+    setTempData({
+      birthdate: userData?.birthdate
+        ? new Date(userData.birthdate).toISOString().split("T")[0]
+        : "",
+      weight: userData?.weight || 0,
+      height: userData?.height || 0,
+      goal: userData?.goal || "Stay Healthy",
+      dailyCalories: userData?.dailyCalories || 2000,
+      proteinTarget: userData?.proteinTarget || 100,
+    });
     setModalType(type);
   };
 
-  const handleSave = () => {
-    setUserData(tempData); // update data asli menggunakan data sementara
-    setModalType(null);
-    console.log("Data saved to local state!");
+  // fungsi simpan data ke Backend (Supabase via Express)
+  const handleSave = async () => {
+    const currentUserId = user?.id;
+
+    if (!currentUserId) {
+      console.error("User ID tidak ditemukan!");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const payload = {
+        userId: currentUserId,
+        name: user.displayName,
+        email: user.email,
+        birthdate: tempData.birthdate,
+        goal: tempData.goal,
+        weight: parseFloat(tempData.weight) || 0,
+        height: parseFloat(tempData.height) || 0,
+        dailyCalories: 0,
+        proteinTarget: 0,
+      };
+
+      console.log("🚀 Mengirim data (Triggering Auto-Calculate):", payload);
+
+      const response = await axios.post(
+        "http://localhost:5000/api/profile",
+        payload,
+      );
+
+      if (response.data.success) {
+        console.log("✅ Berhasil! Data baru dari backend:", response.data.data);
+
+        // ambil data terbaru hasil hitungan backend ke dalam Context
+        await fetchProfile(currentUserId, true);
+
+        setModalType(null);
+      }
+    } catch (error) {
+      console.error("❌ Error Detail:", error.response?.data || error.message);
+      alert("Gagal simpan data profile!");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -63,23 +95,17 @@ const ProfilePage = () => {
     <div className="min-h-screen bg-[#eefaf1] pb-20">
       <Navbar user={user} />
 
-      {/* Hero Section */}
+      {/* Hero Section - ambil data Auth Firebase */}
       <div className="mt-20">
-        <ProfileHero user={user} />
+        <ProfileHero user={user} userData={userData} />
       </div>
 
       <main className="max-w-[800px] mx-auto px-6 mt-8 space-y-6">
-        {/* Stats Section */}
-        <StatsCard
-          data={{
-            ...userData,
-            age: calculateAge(userData.birthdate),
-          }}
-          onEdit={() => openModal("stats")}
-        />
+        {/* Stats Section - ambil data dari UserContext */}
+        <StatsCard onEdit={() => openModal("stats")} />
 
-        {/* Goals Section */}
-        <GoalsCard data={userData} onEdit={() => openModal("goals")} />
+        {/* Goals Section - ambil data dari UserContext */}
+        <GoalsCard onEdit={() => openModal("goals")} />
 
         <button
           onClick={handleLogout}
@@ -89,11 +115,12 @@ const ProfilePage = () => {
         </button>
       </main>
 
-      {/* reusable modal */}
+      {/* Reusable Modal untuk Edit Stats & Goals */}
       <EditModal
         isOpen={!!modalType}
         onClose={() => setModalType(null)}
         onSave={handleSave}
+        isLoading={isLoading}
         title={
           modalType === "stats" ? "Edit Body Stats" : "Change Goal Settings"
         }
@@ -101,12 +128,12 @@ const ProfilePage = () => {
         {modalType === "stats" ? (
           <div className="space-y-5">
             <div>
-              <label className="text-xs font-bold text-gray-400 uppercase ml-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase ml-1 tracking-wider">
                 Birthdate
               </label>
               <input
                 type="date"
-                className="w-full mt-1 p-4 bg-gray-50 rounded-2xl border border-gray-100 focus:border-green-500 outline-none font-bold text-gray-700"
+                className="w-full mt-1 p-4 bg-gray-50 rounded-2xl border border-gray-100 focus:border-green-500 outline-none font-bold text-gray-700 transition-all"
                 value={tempData.birthdate || ""}
                 onChange={(e) =>
                   setTempData({ ...tempData, birthdate: e.target.value })
@@ -115,7 +142,7 @@ const ProfilePage = () => {
             </div>
             <div className="flex gap-4">
               <div className="flex-1">
-                <label className="text-xs font-bold text-gray-400 uppercase ml-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase ml-1 tracking-wider">
                   Weight (kg)
                 </label>
                 <input
@@ -128,7 +155,7 @@ const ProfilePage = () => {
                 />
               </div>
               <div className="flex-1">
-                <label className="text-xs font-bold text-gray-400 uppercase ml-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase ml-1 tracking-wider">
                   Height (cm)
                 </label>
                 <input
@@ -145,7 +172,7 @@ const ProfilePage = () => {
         ) : (
           <div className="space-y-5">
             <div>
-              <label className="text-xs font-bold text-gray-400 uppercase ml-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase ml-1 tracking-wider">
                 Current Goal
               </label>
               <select
@@ -161,7 +188,7 @@ const ProfilePage = () => {
               </select>
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-400 uppercase ml-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase ml-1 tracking-wider">
                 Daily Calories Goal (kcal)
               </label>
               <input
@@ -174,7 +201,7 @@ const ProfilePage = () => {
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-400 uppercase ml-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase ml-1 tracking-wider">
                 Protein Target (g)
               </label>
               <input
