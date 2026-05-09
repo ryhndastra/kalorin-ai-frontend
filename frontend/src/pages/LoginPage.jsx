@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "../config/firebase";
+import { syncUserToDb } from "../utils/authUtils";
 import AuthInput from "../components/Auth/AuthInput";
 import SocialAuth from "../components/Auth/SocialAuth";
 
@@ -19,7 +20,15 @@ const LoginPage = () => {
     setErrorMsg("");
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
+
+      // 2. SINKRONKAN KE SUPABASE
+      await syncUserToDb(userCredential.user);
+
       navigate("/analyze");
     } catch (error) {
       console.error("Login Email Gagal:", error);
@@ -34,7 +43,11 @@ const LoginPage = () => {
     setErrorMsg("");
 
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+
+      // sinkronkan data user ke Supabase (via Express) setelah login sukses
+      await syncUserToDb(result.user);
+
       navigate("/analyze");
     } catch (error) {
       console.error("Login Google Gagal:", error);
@@ -99,7 +112,7 @@ const LoginPage = () => {
 
         <SocialAuth onGoogleClick={handleGoogleLogin} isLoading={isLoading} />
 
-        <p className="text-center text-sm text-gray-600">
+        <p className="text-center text-sm text-gray-600 mt-6">
           Don't have an account?{" "}
           <button
             onClick={() => navigate("/register")}

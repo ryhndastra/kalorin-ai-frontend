@@ -7,6 +7,7 @@ import {
   signInWithPopup,
 } from "firebase/auth";
 import { auth, googleProvider } from "../config/firebase";
+import { syncUserToDb } from "../utils/authUtils";
 import AuthInput from "../components/Auth/AuthInput";
 import SocialAuth from "../components/Auth/SocialAuth";
 
@@ -25,12 +26,10 @@ const RegisterPage = () => {
     e.preventDefault();
     setErrorMsg("");
 
-    // Validasi password match
     if (password !== confirmPassword) {
       return setErrorMsg("Password dan konfirmasi password tidak cocok!");
     }
 
-    // Validasi panjang password
     if (password.length < 6) {
       return setErrorMsg("Password harus minimal 6 karakter.");
     }
@@ -38,7 +37,7 @@ const RegisterPage = () => {
     setIsLoading(true);
 
     try {
-      // buat user baru
+      // buat user di Firebase
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -46,10 +45,13 @@ const RegisterPage = () => {
       );
       const user = userCredential.user;
 
-      // update displayName dengan fullName yang diinput
+      // update Profile di Firebase
       await updateProfile(user, {
         displayName: fullName,
       });
+
+      // sinkronkan data user ke Supabase (via Express) setelah register sukses
+      await syncUserToDb(user, fullName);
 
       navigate("/analyze");
     } catch (error) {
@@ -69,7 +71,11 @@ const RegisterPage = () => {
     setErrorMsg("");
 
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+
+      // sinkronkan ke suopabase
+      await syncUserToDb(result.user);
+
       navigate("/analyze");
     } catch (error) {
       console.error("Error Google Auth:", error);
@@ -145,7 +151,6 @@ const RegisterPage = () => {
           </button>
         </form>
 
-        {/* Cukup panggil 1 baris ini untuk semua tombol sosial media! */}
         <SocialAuth onGoogleClick={handleGoogleLogin} isLoading={isLoading} />
 
         <p className="text-center text-sm text-gray-600">

@@ -1,4 +1,5 @@
 import os
+import traceback
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import tensorflow as tf
@@ -54,7 +55,7 @@ class NutritionInteractionLayer(layers.Layer):
 # Dapatkan API Key dari https://aistudio.google.com/
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY)
-gemini_model = genai.GenerativeModel('gemini-flash-latest')
+gemini_model = genai.GenerativeModel('gemini-2.0-flash')
 
 # Inisialisasi aplikasi FastAPI
 app = FastAPI(title="KaloriN AI Recommender Microservice", version="1.0")
@@ -112,8 +113,7 @@ async def generate_explanation(food_name, user_status, is_recommended):
         response = gemini_model.generate_content(prompt)
         return response.text.strip()
     except Exception:
-        # Fallback jika API Limit tercapai atau error
-        return "Makanan ini direkomendasikan karena komposisi nutrisinya sangat mendukung profil kesehatan kamu."
+        return "Makanan ini direkomendasikan karena komposisi nutrisinya sangat mendukung profil kesehatan kamu." 
 
 # API Endpoints
 
