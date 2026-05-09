@@ -2,7 +2,6 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { calculateUserStatus } = require("../utils/bmiUtils");
 const { calculateDailyNeeds } = require("../utils/calculatorUtils");
-r;
 
 const createOrUpdateProfile = async (req, res) => {
   try {
