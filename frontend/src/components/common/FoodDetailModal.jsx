@@ -1,90 +1,154 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable no-unused-vars */
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import {
-  X,
-  Flame,
-  Utensils,
-  Zap,
-  Droplets,
-  BrainCircuit,
-  Sparkles,
-} from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { X, Flame, Utensils, Zap, Droplets, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getFoodRecommendation } from "../../api/aiService";
 import { useAuth } from "../../context/AuthProvider";
 
-const FoodDetailModal = ({ food, isOpen, onClose, onAiDataReceived }) => {
-  const { user } = useAuth(); // ambil user dari Firebase
+const CACHE_TTL = 1000 * 60 * 30; // 30 menit
+
+const FoodDetailModal = ({ food, isOpen, onClose }) => {
+  const { user } = useAuth();
+
   const [aiData, setAiData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [displayedText, setDisplayedText] = useState("");
-  const hasFetched = useRef(false);
 
   const typeText = useCallback((text) => {
-    const str = String(text ?? "Rekomendasi sedang disiapkan...");
+    const str = String(text || "RinAI sedang menyiapkan analisis...");
+
     let i = 0;
+
     setDisplayedText("");
 
     const interval = setInterval(() => {
       setDisplayedText(str.slice(0, i + 1));
+
       i++;
-      if (i >= str.length) clearInterval(interval);
+
+      if (i >= str.length) {
+        clearInterval(interval);
+      }
     }, 15);
-    return interval;
+
+    return () => clearInterval(interval);
   }, []);
 
+  // CACHE HELPERS
+  const getCachedData = (key) => {
+    try {
+      const raw = sessionStorage.getItem(key);
+
+      if (!raw) return null;
+
+      const parsed = JSON.parse(raw);
+
+      // invalid cache structure
+      if (!parsed || !parsed.explanation || !parsed.timestamp) {
+        sessionStorage.removeItem(key);
+        return null;
+      }
+
+      // expired cache
+      const isExpired = Date.now() - parsed.timestamp > CACHE_TTL;
+
+      if (isExpired) {
+        sessionStorage.removeItem(key);
+        return null;
+      }
+
+      return parsed;
+    } catch {
+      sessionStorage.removeItem(key);
+      return null;
+    }
+  };
+
+  const saveCache = (key, data) => {
+    sessionStorage.setItem(
+      key,
+      JSON.stringify({
+        ...data,
+        timestamp: Date.now(),
+      }),
+    );
+  };
+
+  // FETCH AI
   useEffect(() => {
     if (!isOpen) {
       setDisplayedText("");
+      setAiData(null);
       return;
     }
 
     if (!food?.id || !user?.id) return;
 
-    // cek cache biar ga boros prompt
     const cacheKey = `rinai-${user.id}-${food.id}`;
-    const cachedData = sessionStorage.getItem(cacheKey);
+
+    // CHECK CACHE
+    const cachedData = getCachedData(cacheKey);
 
     if (cachedData) {
-      const parsed = JSON.parse(cachedData);
-      setAiData(parsed);
-      typeText(parsed.explanation); // langsung ngetik dari cache
-      return; // stop, ga usah fetch lagi
+      console.log("⚡ Using cached AI explanation");
+
+      setAiData(cachedData);
+
+      typeText(cachedData.explanation);
+
+      return;
     }
 
-    // kalau gaada cache, baru fetch
+    // FETCH FROM API
     const fetchAI = async () => {
       setLoading(true);
+
       try {
         const res = await getFoodRecommendation(user.id, parseInt(food.id));
-        const textToDisplay =
-          res.recommendation?.explanation || res.recommendation;
+
+        console.log("🧠 AI RESPONSE:", res);
+
+        // ambil explanation secara aman
+        const explanation = res?.recommendation?.explanation;
+
+        // validasi explanation
+        const safeExplanation =
+          typeof explanation === "string" && explanation.trim().length > 0
+            ? explanation
+            : "RinAI belum bisa memberikan analisis detail untuk makanan ini.";
+
+        const matchScore = res?.recommendation?.match_score_percent || 0;
 
         const dataToCache = {
-          explanation: textToDisplay,
-          match_score_percent: res.recommendation?.match_score_percent || 100,
+          explanation: safeExplanation,
+          match_score_percent: matchScore,
         };
 
-        // simpen ke state dan cache sekaligus
         setAiData(dataToCache);
-        sessionStorage.setItem(cacheKey, JSON.stringify(dataToCache));
 
-        typeText(textToDisplay);
+        saveCache(cacheKey, dataToCache);
+
+        typeText(safeExplanation);
       } catch (err) {
-        setDisplayedText("Gagal mengambil analisis.");
+        console.error("❌ Food Detail AI Error:", err);
+
+        setDisplayedText(
+          "RinAI sementara tidak dapat membuat analisis detail.",
+        );
       } finally {
         setLoading(false);
       }
     };
 
     fetchAI();
-  }, [isOpen, food?.id, user?.id, typeText, onAiDataReceived]);
+  }, [isOpen, food?.id, user?.id, typeText]);
 
   return (
     <AnimatePresence>
       {isOpen && food && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+          {/* BACKDROP */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -93,12 +157,26 @@ const FoodDetailModal = ({ food, isOpen, onClose, onAiDataReceived }) => {
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
           />
 
+          {/* MODAL */}
           <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            initial={{
+              scale: 0.9,
+              opacity: 0,
+              y: 20,
+            }}
+            animate={{
+              scale: 1,
+              opacity: 1,
+              y: 0,
+            }}
+            exit={{
+              scale: 0.9,
+              opacity: 0,
+              y: 20,
+            }}
             className="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl z-10 relative"
           >
+            {/* CLOSE BUTTON */}
             <button
               onClick={onClose}
               className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 rounded-full text-white z-20 transition-colors"
@@ -106,6 +184,7 @@ const FoodDetailModal = ({ food, isOpen, onClose, onAiDataReceived }) => {
               <X size={20} />
             </button>
 
+            {/* FOOD IMAGE */}
             <img
               src={food.image}
               className="w-full h-52 object-cover"
@@ -113,50 +192,60 @@ const FoodDetailModal = ({ food, isOpen, onClose, onAiDataReceived }) => {
             />
 
             <div className="p-6 text-left">
+              {/* TITLE */}
               <h2 className="text-2xl font-bold text-gray-800">{food.name}</h2>
+
               <p className="text-gray-500 text-sm mb-6 italic">
                 Nutritional info per serving
               </p>
 
-              {/* nutritions grid */}
+              {/* NUTRITION GRID */}
               <div className="grid grid-cols-4 gap-2 mb-6 text-center">
                 <div className="bg-orange-50 p-2 rounded-xl text-orange-500">
                   <Flame size={14} className="mx-auto" />
                   <p className="text-xs font-bold">{food.calories}</p>
                 </div>
+
                 <div className="bg-blue-50 p-2 rounded-xl text-blue-500">
                   <Utensils size={14} className="mx-auto" />
                   <p className="text-xs font-bold">{food.proteins}g</p>
                 </div>
+
                 <div className="bg-yellow-50 p-2 rounded-xl text-yellow-500">
                   <Zap size={14} className="mx-auto" />
                   <p className="text-xs font-bold">{food.fat}g</p>
                 </div>
+
                 <div className="bg-purple-50 p-2 rounded-xl text-purple-500">
                   <Droplets size={14} className="mx-auto" />
                   <p className="text-xs font-bold">{food.carbohydrate}g</p>
                 </div>
               </div>
 
-              {/* analysis box */}
+              {/* AI ANALYSIS */}
               <div className="bg-[#22C55E]/5 rounded-2xl p-4 border border-[#22C55E]/10 min-h-[100px]">
                 <div className="flex items-center gap-2 mb-2 text-[#22C55E]">
                   <Sparkles size={16} />
+
                   <span className="font-bold text-sm">RinAI Analysis</span>
                 </div>
+
                 {loading ? (
                   <div className="space-y-2 animate-pulse">
                     <div className="h-2 bg-green-100 rounded w-full"></div>
+
                     <div className="h-2 bg-green-100 rounded w-3/4"></div>
                   </div>
                 ) : (
                   <p className="text-sm text-gray-700 leading-relaxed italic">
                     {displayedText}
+
                     <span className="inline-block w-1 h-4 bg-[#22C55E] ml-1 animate-pulse" />
                   </p>
                 )}
               </div>
 
+              {/* BUTTON */}
               <button className="w-full mt-6 py-4 bg-[#22C55E] text-white font-bold rounded-2xl">
                 Add to Meal Plan
               </button>

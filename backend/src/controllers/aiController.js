@@ -5,10 +5,35 @@ const { calculateUserStatus } = require("../utils/bmiUtils");
 
 const AI_URL = process.env.AI_URL || "http://localhost:8000";
 
-// Memory Cache untuk menghindari spam ke API Gemini (Error 429)
-const aiCache = new Map();
+const MAX_FOOD_SCAN = 15;
+const AI_TIMEOUT = 10000;
+const CACHE_TTL = 1000 * 60 * 30; // 30 menit
+const INSIGHT_TTL = 1000 * 60 * 60 * 6; // 6 jam
+const CONCURRENT_LIMIT = 3;
 
-// helper function buat hitung umur dari birthdate
+const aiCache = new Map();
+const insightCache = new Map();
+
+const setCache = (cache, key, value, ttl) => {
+  cache.set(key, {
+    value,
+    expiresAt: Date.now() + ttl,
+  });
+};
+
+const getCache = (cache, key) => {
+  const item = cache.get(key);
+
+  if (!item) return null;
+
+  if (Date.now() > item.expiresAt) {
+    cache.delete(key);
+    return null;
+  }
+
+  return item.value;
+};
+
 const calculateAge = (birthdate) => {
   if (!birthdate) return 20;
   const today = new Date();
@@ -18,149 +43,294 @@ const calculateAge = (birthdate) => {
   if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
     age--;
   }
+
   return age;
 };
 
-// quick insight untuk homepage (motivasi harian, tips, dll)
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// batasi concurrency biar ga spam AI
+const processWithLimit = async (items, limit, asyncFn) => {
+  const results = [];
+
+  for (let i = 0; i < items.length; i += limit) {
+    const chunk = items.slice(i, i + limit);
+
+    const chunkResults = await Promise.all(chunk.map((item) => asyncFn(item)));
+
+    results.push(...chunkResults);
+
+    // delay kecil antar batch
+    await sleep(300);
+  }
+
+  return results;
+};
+
 const getQuickInsight = async (req, res) => {
   try {
     const { userId, macroContext } = req.body;
-    const user = await prisma.profile.findUnique({ where: { userId } });
-    if (!user) return res.status(404).json({ error: "User tidak ditemukan" });
+
+    const cacheKey = `insight-${userId}`;
+
+    const cachedInsight = getCache(insightCache, cacheKey);
+
+    if (cachedInsight) {
+      return res.status(200).json({
+        success: true,
+        recommendation: cachedInsight,
+      });
+    }
+
+    const user = await prisma.profile.findUnique({
+      where: { userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        error: "User tidak ditemukan",
+      });
+    }
 
     const userStatus =
       calculateUserStatus(user.weight, user.height) || "Normal";
 
-    const aiResponse = await axios.post(`${AI_URL}/api/daily-insight`, {
-      user_status: String(userStatus),
-      macro_context: String(
-        macroContext ||
-          `User goal is ${user.goal || "Healthy"}. Keep them motivated!`,
-      ),
-    });
+    const aiResponse = await axios.post(
+      `${AI_URL}/api/daily-insight`,
+      {
+        user_status: String(userStatus),
+        macro_context: String(
+          macroContext ||
+            `User goal is ${user.goal || "Healthy"}. Keep them motivated!`,
+        ),
+      },
+      {
+        timeout: AI_TIMEOUT,
+      },
+    );
+
+    const insightText =
+      aiResponse.data.insight_text ||
+      "Stay consistent with your nutrition goals today!";
+
+    setCache(insightCache, cacheKey, insightText, INSIGHT_TTL);
 
     return res.status(200).json({
       success: true,
-      recommendation: aiResponse.data.insight_text,
+      recommendation: insightText,
     });
   } catch (error) {
     console.error(
       "❌ Error in getQuickInsight:",
       error.response?.data || error.message,
     );
-    res.json({
-      success: true,
-      recommendation:
-        "Keep track of your meals to get personalized AI insights! 🚀",
-    });
-  }
-};
-
-// rekomendasi makanan
-const getRecommendedFoodList = async (req, res) => {
-  try {
-    const { userId } = req.body;
-    const user = await prisma.profile.findUnique({ where: { userId } });
-    if (!user) return res.status(404).json({ error: "User profile not found" });
-
-    // ambil max 25 makanan acak agar database tidak monoton
-    const totalFoods = await prisma.food.count();
-    const skip = Math.floor(Math.random() * Math.max(0, totalFoods - 25));
-    const rawFoods = await prisma.food.findMany({ take: 25, skip: skip });
-
-    const user_status =
-      calculateUserStatus(user.weight, user.height) || "Normal";
-    const user_age = calculateAge(user.birthdate);
-    const user_goal = user.goal?.toLowerCase() || "stay healthy";
-
-    console.log(
-      `🤖 RinAI Scanning | User: ${user_status} | Goal: ${user_goal}`,
-    );
-
-    const recommendationPromises = rawFoods.map(async (food) => {
-      try {
-        // hard filter berdasarkan goals dan status
-        const foodName = food.name.toLowerCase();
-        const badWords = ["lemak", "gajih", "babi", "minyak", "goreng"];
-        const isJunkFood = badWords.some((w) => foodName.includes(w));
-
-        // filter untuk obeseitas/weight loss
-        if (user_goal === "weight loss" || user_status.includes("Obesity")) {
-          if (isJunkFood || food.calories > 350 || food.fat > 15) return null;
-        }
-
-        // filter untuk bulking/muscle gain: makanan tanpa protein kemungkinan besar kurang optimal
-        if (user_goal === "bulking") {
-          if (food.proteins < 1) return null; // hilangin makanan null protein
-        }
-
-        // cache dipisahim berdasarkan goal agar tetap akurat saat user ganti target
-        const cacheKey = `${userId}-${food.id}-${user_goal}`;
-        if (aiCache.has(cacheKey)) return aiCache.get(cacheKey);
-
-        // request ke AI untuk setiap makanan yang lolos filter awal
-        const payload = {
-          user_age: Number(user_age),
-          user_weight: Number(user.weight),
-          user_height: Number(user.height),
-          user_status: String(user_status),
-          user_goal: String(user_goal),
-          food_cal: Number(food.calories),
-          food_prot: Number(food.proteins),
-          food_fat: Number(food.fat),
-          food_carb: Number(food.carbohydrate),
-          food_cluster: Number(food.foodCluster),
-          food_name: String(food.name),
-        };
-
-        const aiRes = await axios.post(`${AI_URL}/api/recommend`, payload);
-
-        if (aiRes.data.is_recommended) {
-          const result = {
-            ...food,
-            matchScore: aiRes.data.match_score_percent,
-            explanation: aiRes.data.explanation,
-          };
-          aiCache.set(cacheKey, result);
-          return result;
-        }
-        return null;
-      } catch (err) {
-        return null;
-      }
-    });
-
-    const evaluatedFoods = (await Promise.all(recommendationPromises)).filter(
-      (f) => f !== null,
-    );
-
-    // sorting skor terbesar
-    evaluatedFoods.sort((a, b) => b.matchScore - a.matchScore);
-
-    console.log(`✅ Scan Complete. Showing ${evaluatedFoods.length} foods.`);
 
     return res.status(200).json({
       success: true,
-      data: evaluatedFoods,
+      recommendation:
+        "Keep tracking your meals consistently to unlock smarter nutrition insights 🚀",
     });
-  } catch (error) {
-    console.error("❌ Error AI List:", error.message);
-    res.status(500).json({ success: false });
   }
 };
 
-// detail rekomendasi makanan
+const isFoodSuitable = (food, userGoal, userStatus) => {
+  const foodName = food.name.toLowerCase();
+
+  const badWords = ["gajih", "goreng", "lemak", "minyak", "babi"];
+
+  const isJunkFood = badWords.some((w) => foodName.includes(w));
+
+  // cutting / obesity
+  if (
+    userGoal.includes("weight") ||
+    userGoal.includes("loss") ||
+    userStatus.includes("Obesity")
+  ) {
+    if (isJunkFood || food.calories > 350 || food.fat > 15) {
+      return false;
+    }
+  }
+
+  // bulking
+  if (userGoal.includes("bulk")) {
+    if (food.proteins < 8) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+const normalizeScore = (score) => {
+  const numericScore = Number(score || 0);
+
+  // clamp safety
+  const clamped = Math.max(0, Math.min(100, numericScore));
+
+  // hindari semua 100%
+  if (clamped >= 99) {
+    return Math.floor(92 + Math.random() * 7); // 92-98
+  }
+
+  // hindari score terlalu kecil
+  if (clamped < 50) {
+    return Math.floor(50 + clamped * 0.4);
+  }
+
+  return Math.round(clamped);
+};
+
+const getRecommendedFoodList = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    const user = await prisma.profile.findUnique({
+      where: { userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        error: "User profile not found",
+      });
+    }
+
+    const totalFoods = await prisma.food.count();
+
+    const skip = Math.floor(
+      Math.random() * Math.max(0, totalFoods - MAX_FOOD_SCAN),
+    );
+
+    const rawFoods = await prisma.food.findMany({
+      take: MAX_FOOD_SCAN,
+      skip,
+    });
+
+    const user_status =
+      calculateUserStatus(user.weight, user.height) || "Normal";
+
+    const user_age = calculateAge(user.birthdate);
+
+    const user_goal = user.goal?.toLowerCase() || "stay healthy";
+
+    console.log(`🤖 RinAI Scan | ${user_status} | Goal: ${user_goal}`);
+
+    // FILTER BEFORE AI
+    const filteredFoods = rawFoods.filter((food) =>
+      isFoodSuitable(food, user_goal, user_status),
+    );
+
+    // AI EVALUATION
+    const evaluatedFoods = await processWithLimit(
+      filteredFoods,
+      CONCURRENT_LIMIT,
+      async (food) => {
+        try {
+          const cacheKey = `${userId}-${food.id}-${user_goal}`;
+
+          const cachedFood = getCache(aiCache, cacheKey);
+
+          if (cachedFood) {
+            return cachedFood;
+          }
+
+          const payload = {
+            user_age: Number(user_age),
+            user_weight: Number(user.weight),
+            user_height: Number(user.height),
+            user_status: String(user_status),
+            user_goal: String(user_goal),
+
+            food_cal: Number(food.calories),
+            food_prot: Number(food.proteins),
+            food_fat: Number(food.fat),
+            food_carb: Number(food.carbohydrate),
+            food_cluster: Number(food.foodCluster),
+            food_name: String(food.name),
+          };
+
+          const aiRes = await axios.post(`${AI_URL}/api/recommend`, payload, {
+            timeout: AI_TIMEOUT,
+          });
+
+          // invalid response
+          if (!aiRes?.data) {
+            return null;
+          }
+
+          const { is_recommended, match_score_percent, explanation } =
+            aiRes.data;
+
+          if (!is_recommended) {
+            return null;
+          }
+
+          // normalize display score
+          const normalizedScore = normalizeScore(match_score_percent);
+
+          console.log(
+            `🧠 ${food.name} → RAW: ${match_score_percent} | DISPLAY: ${normalizedScore}`,
+          );
+
+          const result = {
+            ...food,
+
+            matchScore: normalizedScore,
+
+            explanation:
+              explanation || "Good nutritional match for your profile.",
+          };
+
+          setCache(aiCache, cacheKey, result, CACHE_TTL);
+
+          return result;
+        } catch (err) {
+          console.error(
+            `❌ AI Error (${food.name}):`,
+            err.response?.status || err.message,
+          );
+
+          return null;
+        }
+      },
+    );
+    const finalFoods = evaluatedFoods
+      .filter(Boolean)
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, 10);
+
+    console.log(`✅ Scan Complete. Showing ${finalFoods.length} foods`);
+
+    return res.status(200).json({
+      success: true,
+      data: finalFoods,
+    });
+  } catch (error) {
+    console.error("❌ Error AI List:", error.response?.data || error.message);
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to generate recommendations",
+    });
+  }
+};
+
 const getFoodRecommendation = async (req, res) => {
   try {
     const { userId, foodId } = req.body;
 
-    const user = await prisma.profile.findUnique({ where: { userId } });
+    const user = await prisma.profile.findUnique({
+      where: { userId },
+    });
+
     const food = await prisma.food.findUnique({
       where: { id: Number(foodId) },
     });
 
-    if (!user || !food)
-      return res.status(404).json({ error: "Data not found" });
+    if (!user || !food) {
+      return res.status(404).json({
+        error: "Data not found",
+      });
+    }
 
     const payload = {
       user_age: Number(calculateAge(user.birthdate)),
@@ -178,7 +348,9 @@ const getFoodRecommendation = async (req, res) => {
       food_name: String(food.name),
     };
 
-    const aiRes = await axios.post(`${AI_URL}/api/recommend`, payload);
+    const aiRes = await axios.post(`${AI_URL}/api/recommend`, payload, {
+      timeout: AI_TIMEOUT,
+    });
 
     return res.status(200).json({
       success: true,
@@ -189,7 +361,10 @@ const getFoodRecommendation = async (req, res) => {
       "❌ Error in getFoodRecommendation:",
       error.response?.data || error.message,
     );
-    res.status(500).json({ error: "Failed to get detail recommendation" });
+
+    return res.status(500).json({
+      error: "Failed to get detail recommendation",
+    });
   }
 };
 
