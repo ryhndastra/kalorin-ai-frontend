@@ -11,6 +11,7 @@ import ProfilePage from "./pages/ProfilePage";
 // import hooks buat ambil data
 import { useAuth } from "./context/AuthProvider";
 import { useUser } from "./context/UserContext";
+import MealsPage from "./pages/MealsPage";
 
 export default function App() {
   const { user } = useAuth();
@@ -29,6 +30,7 @@ export default function App() {
       <Route path="/analyze" element={<AnalyzePage />} />
       <Route path="/home" element={<HomePage />} />
       <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/meals" element={<MealsPage />} />
 
       <Route element={<GuestRoute />}>
         <Route path="/" element={<LandingPage />} />

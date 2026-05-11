@@ -94,7 +94,7 @@ const processWithLimit = async (items, limit, asyncFn) => {
 };
 
 // Max food yang dikirim ke AI per request
-const MAX_AI_CANDIDATES = 10;
+const MAX_AI_CANDIDATES = 15;
 
 // GENERATE RECOMMENDATION LIST
 const generateRecommendationList = async (userId) => {
