@@ -1,6 +1,6 @@
 const AI_URL = process.env.AI_URL || "http://localhost:8000";
 
-const MAX_FOOD_SCAN = 15;
+const MAX_FOOD_SCAN = 10;
 
 const AI_TIMEOUT = 10000;
 
