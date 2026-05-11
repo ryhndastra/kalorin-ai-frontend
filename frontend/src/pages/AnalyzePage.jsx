@@ -81,7 +81,7 @@ const AnalyzePage = () => {
       const hasSeenToast = sessionStorage.getItem("welcomeToastShown");
       if (!hasSeenToast) {
         toast.success(`Welcome back, ${user.displayName || "User"}!`, {
-          icon: "👋",
+          icon: <User />,
         });
         sessionStorage.setItem("welcomeToastShown", "true");
       }
