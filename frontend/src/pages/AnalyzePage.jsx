@@ -8,12 +8,13 @@ import DefaultScanPlaceholder from "../components/Analyze/DefaultScanPlaceholder
 import AnalysisResult from "../components/Analyze/AnalysisResult";
 import GuestUpsell from "../components/Analyze/GuestUpsell";
 import LoadingCard from "../components/Analyze/LoadingCard";
+import SearchFoodTab from "../components/Analyze/SearchFoodTab";
 import { useUser } from "../context/UserContext";
 import { useAuth } from "../context/AuthContext";
 import AnalyzeSkeleton from "../components/skeletons/AnalyzeSkeleton";
 
 const AnalyzePage = () => {
-  // states
+  // STATES
   const { user } = useAuth();
   const { isInitialized, loading: profileLoading } = useUser();
   const isGuest = !user;
@@ -25,18 +26,18 @@ const AnalyzePage = () => {
   const [capturedImage, setCapturedImage] = useState(null);
   const [isSwitching, setIsSwitching] = useState(true);
 
+  // PAGE LOADING
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsSwitching(false);
     }, 400);
-
     return () => clearTimeout(timer);
   }, []);
 
   const isPageLoading =
     !isInitialized || (user && profileLoading) || isSwitching;
 
-  // handler untuk analisis makanan. nanti bakal ganti ke API call, sekarang masih dummy pakai timeout
+  // ANALYZE HANDLER
   const handleAnalyze = async (e) => {
     e.preventDefault();
     setIsAnalyzing(true);
@@ -44,16 +45,23 @@ const AnalyzePage = () => {
       const dummyData = {
         foodName: "Avocado Toast with Egg",
         calories: 350,
-        macros: { protein: "12g", carbs: "25g", fat: "22g" },
+        macros: {
+          protein: "12g",
+          carbs: "25g",
+          fat: "22g",
+        },
         confidence: "95%",
       };
       setAnalysisResult(dummyData);
       setIsAnalyzing(false);
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: "smooth",
+      });
     }, 2000);
   };
 
-  // handler untuk upload file
+  // FILE UPLOAD
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -66,16 +74,19 @@ const AnalyzePage = () => {
     }
   };
 
+  // CAMERA TOGGLE
   const toggleCamera = () => {
     setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
   };
 
+  // CAMERA CAPTURE
   const capture = useCallback((webcamRef) => {
     const imageSrc = webcamRef.current.getScreenshot();
     setCapturedImage(imageSrc);
     setIsCameraActive(false);
   }, []);
 
+  // WELCOME TOAST
   useEffect(() => {
     if (user) {
       const hasSeenToast = sessionStorage.getItem("welcomeToastShown");
@@ -88,6 +99,7 @@ const AnalyzePage = () => {
     }
   }, [user]);
 
+  // SKELETON
   if (isPageLoading) {
     return (
       <div className="pt-20 min-h-screen bg-white">
@@ -102,7 +114,7 @@ const AnalyzePage = () => {
       <Toaster position="top-center" reverseOrder={false} />
       <Navbar user={user} loading={false} />
 
-      {/* banner untuk guest */}
+      {/* GUEST BANNER */}
       {isGuest && (
         <div className="w-full bg-green-500 p-4">
           <div className="max-w-7xl mx-auto px-4 text-white text-sm font-medium flex justify-between items-center">
@@ -113,7 +125,7 @@ const AnalyzePage = () => {
         </div>
       )}
 
-      {/* Header */}
+      {/* HEADER */}
       <div className="max-w-7xl mx-auto px-4 w-full py-8">
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -126,8 +138,7 @@ const AnalyzePage = () => {
                 : "Identify your meal and track your daily nutrition"}
             </p>
           </div>
-
-          {/* Hanya tampilkan label GuestMode jika belum login */}
+          {/* GUEST LABEL */}
           {isGuest && (
             <span className="px-5 py-2 border border-green-600 bg-[#eefaf1] text-green-600 text-xs font-semibold rounded-lg">
               GuestMode
@@ -135,7 +146,7 @@ const AnalyzePage = () => {
           )}
         </div>
 
-        {/* Tab Switcher */}
+        {/* TAB SWITCHER */}
         <div className="flex w-full bg-gray-100/80 rounded-2xl p-1.5 mb-2">
           <button
             onClick={() => setActiveTab("scan")}
@@ -145,8 +156,10 @@ const AnalyzePage = () => {
                 : "text-gray-500"
             }`}
           >
-            <Camera size={20} /> Scan Image
+            <Camera size={20} />
+            Scan Image
           </button>
+
           <button
             onClick={() => setActiveTab("search")}
             className={`flex-1 py-3 text-base font-medium rounded-xl flex items-center justify-center gap-2 transition-all duration-300 ${
@@ -155,46 +168,53 @@ const AnalyzePage = () => {
                 : "text-gray-500"
             }`}
           >
-            <Search size={20} /> Search Food
+            <Search size={20} />
+            Search Food
           </button>
         </div>
       </div>
 
-      {/* Scan Area*/}
-      <div className="bg-[#eefaf1] w-full flex-grow mt-4 pt-10 pb-20">
-        <div className="max-w-7xl mx-auto px-4 w-full">
-          <div className="border-2 border-green-400 border-dashed rounded-3xl p-6 min-h-[400px] flex items-center justify-center bg-black/5 overflow-hidden mb-6">
-            {isCameraActive ? (
-              <CameraScanner
-                facingMode={facingMode}
-                toggleCamera={toggleCamera}
-                capture={capture}
-                onCancel={() => setIsCameraActive(false)}
-              />
-            ) : capturedImage ? (
-              <ImagePreview
-                image={capturedImage}
-                onAnalyze={handleAnalyze}
-                onRetake={() => setCapturedImage(null)}
-              />
-            ) : (
-              <DefaultScanPlaceholder
-                onStart={() => setIsCameraActive(true)}
-                onUpload={handleFileUpload}
+      {/* TAB CONTENT */}
+      {activeTab === "scan" ? (
+        <div className="bg-[#eefaf1] w-full flex-grow mt-4 pt-10 pb-20">
+          <div className="max-w-7xl mx-auto px-4 w-full">
+            <div className="border-2 border-green-400 border-dashed rounded-3xl p-6 min-h-[400px] flex items-center justify-center bg-black/5 overflow-hidden mb-6">
+              {isCameraActive ? (
+                <CameraScanner
+                  facingMode={facingMode}
+                  toggleCamera={toggleCamera}
+                  capture={capture}
+                  onCancel={() => setIsCameraActive(false)}
+                />
+              ) : capturedImage ? (
+                <ImagePreview
+                  image={capturedImage}
+                  onAnalyze={handleAnalyze}
+                  onRetake={() => setCapturedImage(null)}
+                />
+              ) : (
+                <DefaultScanPlaceholder
+                  onStart={() => setIsCameraActive(true)}
+                  onUpload={handleFileUpload}
+                />
+              )}
+            </div>
+
+            {isAnalyzing && <LoadingCard />}
+
+            {analysisResult && (
+              <AnalysisResult
+                result={analysisResult}
+                onClear={() => setAnalysisResult(null)}
               />
             )}
-          </div>
 
-          {isAnalyzing && <LoadingCard />}
-          {analysisResult && (
-            <AnalysisResult
-              result={analysisResult}
-              onClear={() => setAnalysisResult(null)}
-            />
-          )}
-          {isGuest && <GuestUpsell />}
+            {isGuest && <GuestUpsell />}
+          </div>
         </div>
-      </div>
+      ) : (
+        <SearchFoodTab />
+      )}
     </div>
   );
 };
