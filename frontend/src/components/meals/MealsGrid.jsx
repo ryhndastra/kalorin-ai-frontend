@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
-import FoodCard from "./FoodCard";
+import FoodCard from "./MealsFoodCard";
 import { getFoodRecommendations } from "../../api/aiService";
 
 // MEALS GRID
 const MealsGrid = ({ userId }) => {
   const [foods, setFoods] = useState([]);
   const [isFetching, setIsFetching] = useState(false);
-  
+
   // FETCH AI RECOMMENDATIONS
   useEffect(() => {
     let active = true;
