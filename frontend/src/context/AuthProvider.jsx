@@ -9,6 +9,7 @@ import Navbar from "../components/Navbar/Navbar";
 import HomeSkeleton from "../components/skeletons/HomeSkeleton";
 import AnalyzeSkeleton from "../components/skeletons/AnalyzeSkeleton";
 import DefaultSpinner from "../components/skeletons/DefaultSpinner";
+import MealsPageSkeleton from "../components/skeletons/MealsPageSkeleton";
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -51,6 +52,8 @@ export const AuthProvider = ({ children }) => {
         return null;
       case "/profile":
         return <DefaultSpinner />;
+      case "/meals":
+        return <MealsPageSkeleton />;
       default:
         return <DefaultSpinner />;
     }
