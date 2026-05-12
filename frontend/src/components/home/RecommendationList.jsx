@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ChevronRight, Loader2 } from "lucide-react";
-import FoodCard from "../meals/FoodCard";
+import HomeFoodCard from "./HomeFoodCard";
 import { getFoodRecommendations } from "../../api/aiService";
 import { Link } from "react-router-dom";
 
@@ -77,7 +77,7 @@ const RecommendationList = ({
         // GRID
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {foods.slice(0, limit).map((food) => (
-            <FoodCard key={food.id} food={food} userId={userId} />
+            <HomeFoodCard key={food.id} food={food} userId={userId} />
           ))}
         </div>
       ) : (

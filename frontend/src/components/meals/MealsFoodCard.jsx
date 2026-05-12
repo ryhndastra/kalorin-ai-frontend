@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-
 import FoodDetailModal from "../common/FoodDetailModal";
 
 const FoodCard = ({ food, userId }) => {
