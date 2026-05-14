@@ -21,6 +21,7 @@ const FoodCard = ({ food, userId }) => {
             alt={food.name}
             className="w-full aspect-[5/4] object-cover bg-gray-100"
           />
+
           {/* MATCH SCORE */}
           {(food.matchScore || aiData?.match_score_percent) && (
             <div className="absolute top-3 left-3 bg-[#22C55E] text-white text-[10px] px-2 py-1 rounded-lg font-bold shadow-sm">
@@ -63,22 +64,16 @@ const FoodCard = ({ food, userId }) => {
             </div>
           </div>
 
-          {/* BUTTONS */}
-          <div className="grid grid-cols-2 gap-3 mt-auto">
-            {/* DETAILS */}
+          {/* BUTTON */}
+          <div className="mt-auto">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setIsModalOpen(true);
               }}
-              className="py-3 rounded-2xl bg-[#F3F8F4] text-[#3D7A50] font-semibold text-sm hover:bg-[#E8F5EC] transition-all"
+              className="w-full py-3 rounded-2xl bg-[#22C55E] text-white font-semibold text-sm hover:bg-[#16A34A] transition-all"
             >
-              Details
-            </button>
-
-            {/* ADD BUTTON */}
-            <button className="py-3 rounded-2xl bg-[#22C55E] text-white font-semibold text-sm hover:bg-[#16A34A] transition-all">
-              Add to Meal Plan
+              View Details
             </button>
           </div>
         </div>

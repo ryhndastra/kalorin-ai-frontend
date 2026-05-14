@@ -4,12 +4,12 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../config/firebase";
 import { AuthContext } from "./AuthContext";
 import { useLocation } from "react-router-dom";
-
 import Navbar from "../components/Navbar/Navbar";
 import HomeSkeleton from "../components/skeletons/HomeSkeleton";
 import AnalyzeSkeleton from "../components/skeletons/AnalyzeSkeleton";
 import DefaultSpinner from "../components/skeletons/DefaultSpinner";
 import MealsPageSkeleton from "../components/skeletons/MealsPageSkeleton";
+import TrackSkeleton from "../components/skeletons/TrackSkeleton";
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -54,6 +54,8 @@ export const AuthProvider = ({ children }) => {
         return <DefaultSpinner />;
       case "/meals":
         return <MealsPageSkeleton />;
+      case "/track":
+        return <TrackSkeleton />;
       default:
         return <DefaultSpinner />;
     }

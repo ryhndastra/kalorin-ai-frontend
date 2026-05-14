@@ -30,7 +30,9 @@ export const UserProvider = ({ children }) => {
         return;
       }
 
-      setLoading(true);
+      if (!force) {
+        setLoading(true);
+      }
 
       try {
         const res = await getUserProfile(userId);
@@ -47,7 +49,9 @@ export const UserProvider = ({ children }) => {
         // jika gagal, biarkan lastFetchedId null agar bisa mencoba lagi nanti
         lastFetchedId.current = null;
       } finally {
-        setLoading(false);
+        if (!force) {
+          setLoading(false);
+        }
         setIsInitialized(true);
       }
     },

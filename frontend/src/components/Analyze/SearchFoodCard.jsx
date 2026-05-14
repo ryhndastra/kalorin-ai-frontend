@@ -1,6 +1,52 @@
-import React from "react";
+import React, { useState } from "react";
+import { Plus, Utensils, CircleX } from "lucide-react";
+import { useAuth } from "../../context/AuthProvider";
+import { addMealLog } from "../../api/trackService";
+import toast from "react-hot-toast";
+import { useUser } from "../../context/UserContext";
 
 const SearchFoodCard = ({ food }) => {
+  const { user } = useAuth();
+  const [isAdding, setIsAdding] = useState(false);
+  const { fetchProfile } = useUser();
+
+  // ADD TO MEAL
+  const handleAddMeal = async () => {
+    try {
+      if (!user) {
+        return;
+      }
+      setIsAdding(true);
+      
+      await addMealLog({
+        userId: user.id || user.uid,
+        foodId: food.id,
+        foodName: food.name,
+        calories: food.calories,
+        proteins: food.proteins,
+        fat: food.fat,
+        carbs: food.carbohydrate,
+        quantity: 1,
+        mealType: "meal",
+      });
+      // REFRESH PROFILE
+      await fetchProfile(user.id || user.uid, true);
+
+      toast.success(`${food.name} added to meal log`, {
+        icon: <Utensils size={18} />,
+      });
+
+      console.log("✅ Meal added");
+    } catch (error) {
+      toast.error("Failed to add meal", {
+        icon: <CircleX size={18} />,
+      });
+      console.error("❌ Failed add meal:", error);
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-3xl border border-gray-100 p-4 shadow-sm flex items-center gap-4">
       {/* IMAGE */}
@@ -18,7 +64,7 @@ const SearchFoodCard = ({ food }) => {
         </p>
 
         {/* MACROS */}
-        <div className="flex gap-5 text-sm">
+        <div className="flex gap-5 text-sm mb-4">
           <div>
             <span className="font-bold text-gray-800">{food.proteins}g</span>
             <p className="text-gray-500 text-xs">Protein</p>
@@ -36,6 +82,16 @@ const SearchFoodCard = ({ food }) => {
             <p className="text-gray-500 text-xs">Fat</p>
           </div>
         </div>
+
+        {/* BUTTON */}
+        <button
+          onClick={handleAddMeal}
+          disabled={isAdding}
+          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#22C55E] text-white text-sm font-semibold hover:bg-[#16A34A] transition-all disabled:opacity-50"
+        >
+          <Plus size={16} />
+          {isAdding ? "Adding..." : "Add to Meal"}
+        </button>
       </div>
     </div>
   );
