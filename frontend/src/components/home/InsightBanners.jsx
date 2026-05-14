@@ -15,7 +15,9 @@ const InsightBanners = () => {
   // logic hitunf sisa protein
   const proteinGoal = userData?.proteinTarget || 0;
   const proteinEaten = userData?.today_stats?.proteins || 0;
-  const proteinLeft = Math.max(0, proteinGoal - proteinEaten);
+  const proteinLeft = Number(
+    Math.max(0, proteinGoal - proteinEaten).toFixed(1),
+  );
 
   // fungsi ambil advice dari AI
   const getAiInsight = async () => {
