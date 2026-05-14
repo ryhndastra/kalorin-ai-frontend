@@ -16,6 +16,7 @@ const {
 } = require("./controllers/aiController");
 
 const user_routes = require("./routes/userRoutes");
+const track_routes = require("./routes/trackRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -37,8 +38,9 @@ app.get("/api/foods/:id", getFoodById);
 app.post("/api/profile", createOrUpdateProfile);
 app.get("/api/profile/:userId", getProfile);
 app.use("/api/user", user_routes);
+app.use("/api/track", track_routes);
 
-// ENDPOINTS AI 
+// ENDPOINTS AI
 
 /**
  * endpoint buat quick insight harian (motivasi, tips, dll) di homepage

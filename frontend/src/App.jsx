@@ -7,11 +7,11 @@ import RegisterPage from "./pages/RegisterPage";
 import HomePage from "./pages/HomePage";
 import GuestRoute from "./components/Navbar/GuestRoute";
 import ProfilePage from "./pages/ProfilePage";
-
-// import hooks buat ambil data
+import { Toaster } from "react-hot-toast";
 import { useAuth } from "./context/AuthProvider";
 import { useUser } from "./context/UserContext";
 import MealsPage from "./pages/MealsPage";
+import TrackPage from "./pages/TrackPage";
 
 export default function App() {
   const { user } = useAuth();
@@ -26,17 +26,21 @@ export default function App() {
     }
   }, [user?.id, userData, loading, fetchProfile]);
   return (
-    <Routes>
-      <Route path="/analyze" element={<AnalyzePage />} />
-      <Route path="/home" element={<HomePage />} />
-      <Route path="/profile" element={<ProfilePage />} />
-      <Route path="/meals" element={<MealsPage />} />
+    <>
+      <Toaster position="top-center" reverseOrder={false} />
+      <Routes>
+        <Route path="/analyze" element={<AnalyzePage />} />
+        <Route path="/home" element={<HomePage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/meals" element={<MealsPage />} />
+        <Route path="/track" element={<TrackPage />} />
 
-      <Route element={<GuestRoute />}>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-      </Route>
-    </Routes>
+        <Route element={<GuestRoute />}>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+        </Route>
+      </Routes>
+    </>
   );
 }

@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useEffect } from "react";
 import Navbar from "../components/Navbar/Navbar";
 import { Camera, Search, User } from "lucide-react";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
+import { useSearchParams } from "react-router-dom";
 import CameraScanner from "../components/Analyze/CameraScanner";
 import ImagePreview from "../components/Analyze/ImagePreview";
 import DefaultScanPlaceholder from "../components/Analyze/DefaultScanPlaceholder";
@@ -14,11 +15,16 @@ import { useAuth } from "../context/AuthContext";
 import AnalyzeSkeleton from "../components/skeletons/AnalyzeSkeleton";
 
 const AnalyzePage = () => {
-  // STATES
+  // CONTEXT
   const { user } = useAuth();
   const { isInitialized, loading: profileLoading } = useUser();
   const isGuest = !user;
-  const [activeTab, setActiveTab] = useState("scan");
+
+  // URL SEARCH PARAMS
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = searchParams.get("tab") || "scan";
+
+  // STATES
   const [analysisResult, setAnalysisResult] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [facingMode, setFacingMode] = useState("environment");
@@ -31,6 +37,7 @@ const AnalyzePage = () => {
     const timer = setTimeout(() => {
       setIsSwitching(false);
     }, 400);
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -41,6 +48,7 @@ const AnalyzePage = () => {
   const handleAnalyze = async (e) => {
     e.preventDefault();
     setIsAnalyzing(true);
+
     setTimeout(() => {
       const dummyData = {
         foodName: "Avocado Toast with Egg",
@@ -52,10 +60,12 @@ const AnalyzePage = () => {
         },
         confidence: "95%",
       };
+
       setAnalysisResult(dummyData);
       setIsAnalyzing(false);
       window.scrollTo({
         top: document.body.scrollHeight,
+
         behavior: "smooth",
       });
     }, 2000);
@@ -64,8 +74,10 @@ const AnalyzePage = () => {
   // FILE UPLOAD
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
+
     if (file) {
       const reader = new FileReader();
+
       reader.onloadend = () => {
         setCapturedImage(reader.result);
         setIsCameraActive(false);
@@ -90,6 +102,7 @@ const AnalyzePage = () => {
   useEffect(() => {
     if (user) {
       const hasSeenToast = sessionStorage.getItem("welcomeToastShown");
+
       if (!hasSeenToast) {
         toast.success(`Welcome back, ${user.displayName || "User"}!`, {
           icon: <User />,
@@ -102,16 +115,15 @@ const AnalyzePage = () => {
   // SKELETON
   if (isPageLoading) {
     return (
-      <div className="pt-20 min-h-screen bg-white">
+      <>
         <Navbar user={user} loading={true} />
         <AnalyzeSkeleton />
-      </div>
+      </>
     );
   }
 
   return (
     <div className="min-h-screen bg-white pt-24 font-sans flex flex-col">
-      <Toaster position="top-center" reverseOrder={false} />
       <Navbar user={user} loading={false} />
 
       {/* GUEST BANNER */}
@@ -138,6 +150,7 @@ const AnalyzePage = () => {
                 : "Identify your meal and track your daily nutrition"}
             </p>
           </div>
+
           {/* GUEST LABEL */}
           {isGuest && (
             <span className="px-5 py-2 border border-green-600 bg-[#eefaf1] text-green-600 text-xs font-semibold rounded-lg">
@@ -149,9 +162,13 @@ const AnalyzePage = () => {
         {/* TAB SWITCHER */}
         <div className="flex w-full bg-gray-100/80 rounded-2xl p-1.5 mb-2">
           <button
-            onClick={() => setActiveTab("scan")}
+            onClick={() =>
+              setSearchParams({
+                tab: "scan",
+              })
+            }
             className={`flex-1 py-3 text-base font-medium rounded-xl flex items-center justify-center gap-2 transition-all duration-300 ${
-              activeTab === "scan"
+              currentTab === "scan"
                 ? "bg-white text-green-500 shadow-sm"
                 : "text-gray-500"
             }`}
@@ -161,9 +178,13 @@ const AnalyzePage = () => {
           </button>
 
           <button
-            onClick={() => setActiveTab("search")}
+            onClick={() =>
+              setSearchParams({
+                tab: "search",
+              })
+            }
             className={`flex-1 py-3 text-base font-medium rounded-xl flex items-center justify-center gap-2 transition-all duration-300 ${
-              activeTab === "search"
+              currentTab === "search"
                 ? "bg-white text-green-500 shadow-sm"
                 : "text-gray-500"
             }`}
@@ -175,7 +196,7 @@ const AnalyzePage = () => {
       </div>
 
       {/* TAB CONTENT */}
-      {activeTab === "scan" ? (
+      {currentTab === "scan" ? (
         <div className="bg-[#eefaf1] w-full flex-grow mt-4 pt-10 pb-20">
           <div className="max-w-7xl mx-auto px-4 w-full">
             <div className="border-2 border-green-400 border-dashed rounded-3xl p-6 min-h-[400px] flex items-center justify-center bg-black/5 overflow-hidden mb-6">

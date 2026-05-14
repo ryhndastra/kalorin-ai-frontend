@@ -124,7 +124,7 @@ const HeroDashboard = ({ user, userData }) => {
               <p className="font-bold text-xl">
                 {left > 0
                   ? `${left.toLocaleString()} kcal left`
-                  : "Goal Reached! 🔥"}
+                  : "Goal Reached!"}
               </p>
               <p className="text-xs opacity-80 uppercase tracking-widest">
                 Target: {goal.toLocaleString()} kcal (

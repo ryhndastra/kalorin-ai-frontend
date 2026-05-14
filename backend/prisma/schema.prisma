@@ -3,14 +3,17 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") 
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
-// Tabel Profil User 
+
+// =========================
+// PROFILE USER
+// =========================
 model Profile {
   id             String   @id @default(uuid())
-  userId         String   @unique // UID dari Firebase
+  userId         String   @unique
   email          String   @unique
   fullName       String?
   birthdate      DateTime?
@@ -19,46 +22,59 @@ model Profile {
   goal           String?  @default("Stay Healthy")
   dailyCalories  Int?     @default(2000)
   proteinTarget  Int?     @default(100)
-  userStatus     String?  
+  userStatus     String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
 
-// Tabel Master Makanan 
+// =========================
+// MASTER FOOD DATABASE
+// =========================
 model Food {
-  id           Int      @id @default(autoincrement())
-  name         String
-  calories     Float
-  proteins     Float
-  fat          Float
-  carbohydrate Float
-  image        String?
-  foodCluster  Int      
+  id             Int        @id @default(autoincrement())
+  name           String
+  calories       Float
+  proteins       Float
+  fat            Float
+  carbohydrate   Float
+  image          String?
+  foodCluster    Int
+  // relation
+  dailyLogs      DailyLog[]
 }
 
+// =========================
+// DAILY MEAL LOGS
+// =========================
 model DailyLog {
-  id        String   @id @default(uuid())
-  userId    String
-  date      DateTime @default(now()) 
-  day       String   
-  
-  // nutrisi dari makanan yang diinput 
-  calories  Float    @default(0)
-  proteins  Float    @default(0)
-  fat       Float    @default(0)
-  carbs     Float    @default(0)
-  
-  foodName  String?
-
-  @@index([userId, day]) 
+  id             String     @id @default(uuid())
+  userId         String
+  // relation ke master food
+  foodId         Int?
+  Food           Food?      @relation(fields: [foodId], references: [id])
+  // snapshot data
+  foodName       String?
+  calories       Float      @default(0)
+  proteins       Float      @default(0)
+  fat            Float      @default(0)
+  carbs          Float      @default(0)
+  // future tracking
+  quantity       Float      @default(1)
+  mealType       String?
+  // tracking date
+  date           DateTime   @default(now())
+  day            String
+  @@index([userId, day])
+  @@index([foodId])
 }
 
-// Tabel AI Insights 
+// =========================
+// DAILY AI INSIGHTS
+// =========================
 model DailyInsight {
-  id        String   @id @default(uuid())
-  userId    String
-  text      String   @db.Text 
-  createdAt DateTime @default(now())
-
-  @@index([userId]) 
+  id             String     @id @default(uuid())
+  userId         String
+  text           String     @db.Text
+  createdAt      DateTime   @default(now())
+  @@index([userId])
 }
