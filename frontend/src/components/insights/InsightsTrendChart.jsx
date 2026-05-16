@@ -9,6 +9,7 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
+import { BarChart3 } from "lucide-react";
 
 const METRICS = [
   {
@@ -47,11 +48,13 @@ const InsightsTrendChart = ({ trends }) => {
         timeZone: "Asia/Jakarta",
       });
 
-      const existing = trends.find((item) => item.date === localDate) || {};
+      const existing = trends?.find((item) => item.date === localDate) || {};
+
       result.push({
         day: date.toLocaleDateString("en-US", {
           weekday: "short",
         }),
+
         calories: existing.calories || 0,
         proteins: existing.proteins || 0,
         carbs: existing.carbs || 0,
@@ -70,6 +73,12 @@ const InsightsTrendChart = ({ trends }) => {
   const highestValue = Math.max(...activeValues);
   const highestDay = days.find((day) => day[activeMetric] === highestValue);
 
+  // EMPTY STATE CHECK
+  const hasTrendData = days.some(
+    (day) =>
+      day.calories > 0 || day.proteins > 0 || day.carbs > 0 || day.fat > 0,
+  );
+
   // TOOLTIP
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -82,8 +91,8 @@ const InsightsTrendChart = ({ trends }) => {
               color: activeConfig.color,
             }}
           >
-            {activeConfig.label}:{" "}
-            <span className="font-bold">{payload[0].value}</span>
+            {activeConfig.label} :
+            <span className="font-bold"> {payload[0].value}</span>
           </p>
         </div>
       );
@@ -91,6 +100,28 @@ const InsightsTrendChart = ({ trends }) => {
 
     return null;
   };
+
+  // EMPTY STATE
+  if (!hasTrendData) {
+    return (
+      <div className="bg-white border border-gray-100 rounded-3xl p-10 mb-8 shadow-sm overflow-hidden relative">
+        {/* GLOW */}
+        <div className="absolute top-0 right-0 w-72 h-72 bg-[#22C55E]/5 blur-3xl rounded-full pointer-events-none" />
+        <div className="relative z-10 max-w-lg">
+          <div className="w-16 h-16 rounded-3xl bg-[#22C55E]/10 flex items-center justify-center mb-6">
+            <BarChart3 className="text-[#22C55E]" size={30} />
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight">
+            Nutrition Trends
+          </h2>
+          <p className="text-gray-500 leading-relaxed text-lg">
+            Track meals consistently for a few days to unlock weekly nutrition
+            trends and behavior analysis.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 mb-8">
@@ -133,7 +164,6 @@ const InsightsTrendChart = ({ trends }) => {
               vertical={false}
               stroke="#E5E7EB"
             />
-
             <XAxis
               dataKey="day"
               tickLine={false}
@@ -143,7 +173,6 @@ const InsightsTrendChart = ({ trends }) => {
                 fontSize: 13,
               }}
             />
-
             <YAxis
               tickLine={false}
               axisLine={false}
@@ -152,14 +181,12 @@ const InsightsTrendChart = ({ trends }) => {
                 fontSize: 12,
               }}
             />
-
             <Tooltip
               content={<CustomTooltip />}
               cursor={{
                 fill: "rgba(0,0,0,0.03)",
               }}
             />
-
             <Bar
               dataKey={activeMetric}
               fill={activeConfig.color}

@@ -42,7 +42,6 @@ const InsightsPage = () => {
 
   // PAGE LOADING
   const [pageLoading, setPageLoading] = useState(true);
-
   // AI LOADING
   const [behavioralLoading, setBehavioralLoading] = useState(true);
 
@@ -53,6 +52,7 @@ const InsightsPage = () => {
         if (!user) {
           return;
         }
+
         const userId = user.uid || user.id;
         setPageLoading(true);
 
@@ -75,7 +75,6 @@ const InsightsPage = () => {
         setPageLoading(false);
       }
     };
-
     fetchMainInsights();
   }, [user]);
 
@@ -96,6 +95,7 @@ const InsightsPage = () => {
         setBehavioralLoading(false);
       }
     };
+
     fetchBehavioralInsights();
   }, [user]);
 
@@ -104,72 +104,76 @@ const InsightsPage = () => {
     return <InsightsPageSkeleton user={user} />;
   }
 
-  // UI
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pt-28 pb-20">
+    <div className="min-h-screen bg-white">
       <Navbar user={user} loading={false} />
-      <div className="max-w-[1600px] mx-auto px-6">
-        {/* HEADER */}
+      {/* HERO */}
+      <div className="max-w-[1600px] mx-auto px-6 pt-28">
         <div className="mb-10">
           <div className="flex items-center gap-4">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">
+              <h1 className="text-5xl font-bold text-gray-900 tracking-tight">
                 Weekly Insights
               </h1>
-              <p className="text-gray-500 mt-1">
+              <p className="text-gray-500 mt-2 text-lg">
                 Analyze your nutrition behavior and weekly trends
               </p>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* SCORE */}
-        <NutritionScoreCard score={score} streaks={streaks} />
+      {/* CONTENT */}
+      <div className="bg-[#EEFaf1] pb-20 pt-10">
+        <div className="max-w-[1600px] mx-auto px-6">
+          {/* SCORE */}
+          <NutritionScoreCard score={score} streaks={streaks} />
 
-        {/* WEEKLY COMPARISON */}
-        <div className="bg-gradient-to-br from-white to-[#F8FAFC] rounded-3xl p-8 shadow-sm border border-gray-100 mb-8 overflow-hidden relative">
-          {/* GLOW */}
-          <div className="absolute top-0 right-0 w-72 h-72 bg-[#22C55E]/5 blur-3xl rounded-full pointer-events-none" />
+          {/* WEEKLY COMPARISON */}
+          <div className="bg-gradient-to-br from-white to-[#F8FAFC] rounded-3xl p-8 shadow-sm border border-gray-100 mb-8 overflow-hidden relative">
+            {/* GLOW */}
+            <div className="absolute top-0 right-0 w-72 h-72 bg-[#22C55E]/5 blur-3xl rounded-full pointer-events-none" />
 
-          {/* HEADER */}
-          <div className="mb-8 relative z-10">
-            <h2 className="text-3xl font-bold text-gray-900">
-              Weekly Comparison
-            </h2>
-            <p className="text-gray-500 mt-2">
-              Compare your nutrition progress with the previous week
-            </p>
+            {/* HEADER */}
+            <div className="mb-8 relative z-10">
+              <h2 className="text-3xl font-bold text-gray-900">
+                Weekly Comparison
+              </h2>
+              <p className="text-gray-500 mt-2">
+                Compare your nutrition progress with the previous week
+              </p>
+            </div>
+
+            {/* CARDS */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 relative z-10">
+              <WeeklyComparisonCard
+                type="calories"
+                percentage={comparison.caloriesChange}
+                hasPreviousData={comparison.hasPreviousData}
+              />
+              <WeeklyComparisonCard
+                type="protein"
+                percentage={comparison.proteinsChange}
+                hasPreviousData={comparison.hasPreviousData}
+              />
+              <WeeklyComparisonCard
+                type="tracking"
+                percentage={comparison.trackingChange}
+                hasPreviousData={comparison.hasPreviousData}
+              />
+            </div>
           </div>
 
-          {/* CARDS */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 relative z-10">
-            <WeeklyComparisonCard
-              type="calories"
-              percentage={comparison.caloriesChange}
-              hasPreviousData={comparison.hasPreviousData}
-            />
-            <WeeklyComparisonCard
-              type="protein"
-              percentage={comparison.proteinsChange}
-              hasPreviousData={comparison.hasPreviousData}
-            />
-            <WeeklyComparisonCard
-              type="tracking"
-              percentage={comparison.trackingChange}
-              hasPreviousData={comparison.hasPreviousData}
-            />
-          </div>
+          {/* TRENDS */}
+          <InsightsTrendChart trends={trends} />
+
+          {/* BEHAVIORAL */}
+          {behavioralLoading ? (
+            <BehavioralInsightsSkeleton />
+          ) : (
+            <BehavioralInsightsList insights={behavioralInsights} />
+          )}
         </div>
-
-        {/* TRENDS */}
-        <InsightsTrendChart trends={trends} />
-
-        {/* BEHAVIORAL */}
-        {behavioralLoading ? (
-          <BehavioralInsightsSkeleton />
-        ) : (
-          <BehavioralInsightsList insights={behavioralInsights} />
-        )}
       </div>
     </div>
   );
