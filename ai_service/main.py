@@ -9,8 +9,17 @@ import joblib
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
+import redis
+import json
+
 
 load_dotenv()
+# REDIS CLIENT
+redis_client = redis.Redis(
+    host="localhost",
+    port=6379,
+    decode_responses=True
+)
 print("KEY:", os.getenv("GOOGLE_API_KEY"))
 # EXPLANATION CACHE (in-memory)
 # Key: "food_name|user_status|is_recommended"
@@ -88,6 +97,25 @@ class DailyInsightRequest(BaseModel):
     user_status: str
     macro_context: str
 
+class BehavioralInsightRequest(BaseModel):
+    trackingConsistency: str
+    trackingDays: int
+    calorieSpikeDay: str | None
+    weekendOvereating: bool
+    proteinGoalHitDays: int
+    underProteinDays: int
+    averageCalories: int
+    averageProtein: int
+
+    dominantMealType: str | None
+    highestCalorieFood: str | None
+    highestProteinFood: str | None
+
+    dominantFoods: list[str]
+    weekendCalories: int
+    weekdayCalories: int
+    lateNightEatingCount: int
+
 # HELPER: GENERATE EXPLANATION
 # Hanya panggil Gemini kalau cache miss
 async def generate_explanation(food_name: str, user_status: str, is_recommended: bool) -> str:
@@ -97,9 +125,11 @@ async def generate_explanation(food_name: str, user_status: str, is_recommended:
     cache_key = f"{food_name.lower()}|{user_status.lower()}"
 
     # Cache hit → ga perlu panggil Gemini
-    if cache_key in explanation_cache:
-        print(f"Explanation cache hit: {cache_key}")
-        return explanation_cache[cache_key]
+    cached = redis_client.get(cache_key)
+
+    if cached:
+        print(f"⚡ Redis explanation cache hit")
+        return cached
 
     # Cache miss → panggil Gemini
     try:
@@ -112,11 +142,11 @@ async def generate_explanation(food_name: str, user_status: str, is_recommended:
         )
         response = gemini_model.generate_content(prompt)
         text = response.text.strip()
-        explanation_cache[cache_key] = text  # simpan ke cache
+        redis_client.setex(cache_key,86400,text)  # simpan ke cache
         return text
     except Exception:
         fallback = "Makanan ini direkomendasikan karena komposisi nutrisinya sangat mendukung profil kesehatan kamu."
-        explanation_cache[cache_key] = fallback
+        redis_client.setex(cache_key,86400,fallback)  # simpan fallback ke cache juga
         return fallback
 
 # HELPER: PREDICT SCORE (shared logic)
@@ -184,15 +214,19 @@ async def get_recommendation_with_explanation(data: InferenceRequest):
 # ENDPOINT 3: /api/daily-insight
 # Tetap panggil Gemini, tapi tambah cache harian
 insight_cache: dict[str, str] = {}
+behavioral_cache: dict[str, list] = {}
 
 @app.post("/api/daily-insight")
 async def get_daily_insight(data: DailyInsightRequest):
     try:
         cache_key = f"{data.user_status.lower()}|{data.macro_context.lower()}"
 
-        if cache_key in insight_cache:
-            print(f"⚡ Insight cache hit")
-            return {"insight_text": insight_cache[cache_key]}
+        cached = redis_client.get(cache_key)
+        if cached:
+            print("⚡ Redis insight cache hit")
+            return {
+                "insight_text": cached
+            }
 
         prompt = (
             f"Kamu adalah AI Gizi di aplikasi. User dengan status {data.user_status} "
@@ -203,18 +237,150 @@ async def get_daily_insight(data: DailyInsightRequest):
         )
         response = gemini_model.generate_content(prompt)
         text = response.text.strip()
-        insight_cache[cache_key] = text
+        redis_client.setex(cache_key,43200,text)
 
         return {"insight_text": text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+# ENDPOINT: /api/behavioral-insights
+@app.post("/api/behavioral-insights")
+async def get_behavioral_insights(data: BehavioralInsightRequest):
+    try:
+        cache_key = str(data.dict())
+
+        # CACHE HIT
+        cached = redis_client.get(cache_key)
+
+        if cached:
+            print(" Redis behavioral cache hit")
+
+            return {
+                "insights": json.loads(cached)
+            }
+
+        prompt = f"""
+            Kamu adalah AI nutrition behavior analyst di aplikasi nutrition modern.
+
+            Tugasmu:
+            Menganalisa pola makan dan perilaku nutrisi user berdasarkan data yang diberikan.
+
+            Generate tepat 3 insight singkat dalam format JSON.
+
+            Campurkan tipe insight secara natural:
+            - warning
+            - success
+            - info
+            - tip
+
+            Insight HARUS berbasis data nyata.
+            Jangan membuat asumsi di luar data.
+
+            Kamu boleh menganalisa:
+            - pola makanan yang sering dikonsumsi
+            - dominasi gorengan atau processed food
+            - pola makan malam terlalu larut
+            - konsistensi protein
+            - perbedaan weekday dan weekend
+            - kualitas sumber nutrisi
+            - kebiasaan tracking
+            - pola meal timing
+
+            Minimal satu insight HARUS membahas food behavior pattern jika datanya relevan.
+
+            Jangan buat semua insight negatif.
+
+            Tone:
+            - modern
+            - pintar
+            - ringkas
+            - manusiawi
+            - analitis
+            - observasional
+            - praktikal
+
+            Hindari:
+            - bahasa corporate
+            - generic health advice
+            - motivational phrases
+            - emotional encouragement
+            - celebratory language
+            - kata dramatis
+            - mengulang insight sama
+            - kalimat terlalu panjang
+            - sounding like fitness influencer
+
+            Fokus pada observasi perilaku, bukan motivasi.
+
+            Rules:
+            - maksimal 18 kata per message
+            - title maksimal 3 kata
+            - jangan pakai emoji
+            - tanpa markdown
+            - return ONLY valid JSON array
+            - gunakan bahasa Indonesia natural
+            - hindari wording awkward atau translasi literal
+
+            Format:
+            [
+                {{
+                    "type": "warning",
+                    "title": "Protein Rendah",
+                    "message": "Target protein hanya tercapai pada 1 dari 7 hari tracking."
+                }},
+                {{
+                    "type": "tip",
+                    "title": "Pola Malam",
+                    "message": "Makan terlalu malam cukup sering muncul minggu ini."
+                }},
+                {{
+                    "type": "info",
+                    "title": "Pilihan Makanan",
+                    "message": "Keripik cukup mendominasi sumber kalori minggu ini."
+                }}
+            ]
+
+            Nutrition Patterns:
+            {data.dict()}
+            """
+
+        print("GEMINI CALLED")
+        response = gemini_model.generate_content(prompt)
+        raw = response.text.strip()
+        raw = raw.replace("```json", "").replace("```", "").strip()
+        parsed = json.loads(raw)
+
+        # CACHE STORE (12 HOURS)
+        redis_client.setex(
+            cache_key,
+            43200,
+            json.dumps(parsed)
+        )
+
+        return {
+            "insights": parsed
+        }
+
+    except Exception as e:
+        traceback.print_exc()
+        return {
+            "insights": [
+                {
+                    "type": "info",
+                    "title": "Insight Gagal",
+                    "message": "Insight perilaku belum dapat dibuat."
+                }
+            ]
+        }
 
 # ENDPOINT 4: /api/cache/stats buat debugging
 @app.get("/api/cache/stats")
 def cache_stats():
     return {
-        "explanation_cache_size": len(explanation_cache),
-        "insight_cache_size": len(insight_cache),
+        "redis_connected": redis_client.ping(),
+        # "explanation_cache_size": len(explanation_cache), udah pake Redis, jadi ga perlu cache in-memory lagi
+        # "insight_cache_size": len(insight_cache),
+        # "behavioral_cache_size": len(behavioral_cache),
     }
 
 # Cara run: uvicorn main:app --reload

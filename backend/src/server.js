@@ -17,6 +17,7 @@ const {
 
 const user_routes = require("./routes/userRoutes");
 const track_routes = require("./routes/trackRoutes");
+const insightRoutes = require("./routes/insightRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -39,6 +40,7 @@ app.post("/api/profile", createOrUpdateProfile);
 app.get("/api/profile/:userId", getProfile);
 app.use("/api/user", user_routes);
 app.use("/api/track", track_routes);
+app.use("/api/insights", insightRoutes);
 
 // ENDPOINTS AI
 
@@ -63,9 +65,6 @@ app.post("/api/ai/food-detail", getFoodRecommendation);
 // Start Server
 app.listen(PORT, () => {
   console.log(`
-  ==========================================
   ✅ Server Node.js jalan di port ${PORT}
-  🚀 Ready to serve AI Recommendations
-  ==========================================
   `);
 });

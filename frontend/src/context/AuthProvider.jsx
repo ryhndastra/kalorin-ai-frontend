@@ -10,6 +10,7 @@ import AnalyzeSkeleton from "../components/skeletons/AnalyzeSkeleton";
 import DefaultSpinner from "../components/skeletons/DefaultSpinner";
 import MealsPageSkeleton from "../components/skeletons/MealsPageSkeleton";
 import TrackSkeleton from "../components/skeletons/TrackSkeleton";
+import InsightsPageSkeleton from "../components/skeletons/InsightsPageSkeleton";
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -56,6 +57,8 @@ export const AuthProvider = ({ children }) => {
         return <MealsPageSkeleton />;
       case "/track":
         return <TrackSkeleton />;
+      case "/insights":
+        return <InsightsPageSkeleton />;
       default:
         return <DefaultSpinner />;
     }

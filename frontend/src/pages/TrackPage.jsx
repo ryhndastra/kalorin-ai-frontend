@@ -26,10 +26,15 @@ const TrackPage = () => {
   });
   const [loading, setLoading] = useState(true);
 
+  // JAKARTA DATE
+  const getJakartaDate = () => {
+    return new Date().toLocaleDateString("en-CA", {
+      timeZone: "Asia/Jakarta",
+    });
+  };
+
   // SELECTED DATE
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0],
-  );
+  const [selectedDate, setSelectedDate] = useState(getJakartaDate());
 
   // CTA VISIBILITY
   const [showCTA, setShowCTA] = useState(true);

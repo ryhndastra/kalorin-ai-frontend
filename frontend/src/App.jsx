@@ -12,6 +12,7 @@ import { useAuth } from "./context/AuthProvider";
 import { useUser } from "./context/UserContext";
 import MealsPage from "./pages/MealsPage";
 import TrackPage from "./pages/TrackPage";
+import InsightsPage from "./pages/InsightsPage";
 
 export default function App() {
   const { user } = useAuth();
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/meals" element={<MealsPage />} />
         <Route path="/track" element={<TrackPage />} />
+        <Route path="/insights" element={<InsightsPage />} />
 
         <Route element={<GuestRoute />}>
           <Route path="/" element={<LandingPage />} />
