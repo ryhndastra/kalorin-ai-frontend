@@ -1,0 +1,189 @@
+/* eslint-disable react-hooks/static-components */
+import React, { useMemo, useState } from "react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts";
+
+const METRICS = [
+  {
+    key: "calories",
+    label: "Calories",
+    color: "#22C55E",
+  },
+  {
+    key: "proteins",
+    label: "Protein",
+    color: "#3B82F6",
+  },
+  {
+    key: "carbs",
+    label: "Carbs",
+    color: "#F59E0B",
+  },
+  {
+    key: "fat",
+    label: "Fat",
+    color: "#EF4444",
+  },
+];
+
+const InsightsTrendChart = ({ trends }) => {
+  // ACTIVE METRIC
+  const [activeMetric, setActiveMetric] = useState("calories");
+
+  // LAST 7 DAYS
+  const days = useMemo(() => {
+    const result = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const localDate = date.toLocaleDateString("en-CA", {
+        timeZone: "Asia/Jakarta",
+      });
+
+      const existing = trends.find((item) => item.date === localDate) || {};
+      result.push({
+        day: date.toLocaleDateString("en-US", {
+          weekday: "short",
+        }),
+        calories: existing.calories || 0,
+        proteins: existing.proteins || 0,
+        carbs: existing.carbs || 0,
+        fat: existing.fat || 0,
+      });
+    }
+
+    return result;
+  }, [trends]);
+
+  // ACTIVE CONFIG
+  const activeConfig = METRICS.find((metric) => metric.key === activeMetric);
+
+  // ANALYTICS
+  const activeValues = days.map((day) => day[activeMetric]);
+  const highestValue = Math.max(...activeValues);
+  const highestDay = days.find((day) => day[activeMetric] === highestValue);
+
+  // TOOLTIP
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white border border-gray-100 shadow-xl rounded-2xl px-4 py-3">
+          <p className="font-semibold text-gray-800 mb-2">{label}</p>
+          <p
+            className="text-sm font-medium"
+            style={{
+              color: activeConfig.color,
+            }}
+          >
+            {activeConfig.label}:{" "}
+            <span className="font-bold">{payload[0].value}</span>
+          </p>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 mb-8">
+      {/* HEADER */}
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5 mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Nutrition Trends</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Last 7 days nutrition overview
+          </p>
+        </div>
+
+        {/* METRIC TOGGLE */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {METRICS.map((metric) => {
+            const active = activeMetric === metric.key;
+            return (
+              <button
+                key={metric.key}
+                onClick={() => setActiveMetric(metric.key)}
+                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 border ${
+                  active
+                    ? "bg-[#111827] text-white border-[#111827] shadow-md scale-105"
+                    : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {metric.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* CHART */}
+      <div className="w-full h-[340px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={days} barCategoryGap="30%">
+            <CartesianGrid
+              strokeDasharray="3 3"
+              vertical={false}
+              stroke="#E5E7EB"
+            />
+
+            <XAxis
+              dataKey="day"
+              tickLine={false}
+              axisLine={false}
+              tick={{
+                fill: "#9CA3AF",
+                fontSize: 13,
+              }}
+            />
+
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tick={{
+                fill: "#9CA3AF",
+                fontSize: 12,
+              }}
+            />
+
+            <Tooltip
+              content={<CustomTooltip />}
+              cursor={{
+                fill: "rgba(0,0,0,0.03)",
+              }}
+            />
+
+            <Bar
+              dataKey={activeMetric}
+              fill={activeConfig.color}
+              radius={[12, 12, 0, 0]}
+              maxBarSize={60}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* INSIGHT */}
+      <div className="mt-5 bg-[#F8FAFC] border border-gray-100 rounded-2xl p-4">
+        <p className="text-sm text-gray-600 leading-relaxed">
+          Highest{" "}
+          <span className="font-semibold text-gray-900">
+            {activeConfig.label.toLowerCase()}
+          </span>{" "}
+          intake occurred on{" "}
+          <span className="font-semibold text-gray-900">{highestDay?.day}</span>
+          .
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default InsightsTrendChart;
